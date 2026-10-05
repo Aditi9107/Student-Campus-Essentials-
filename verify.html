@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify your email | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #otp{font-size:1.6rem;letter-spacing:.5em;text-align:center}
+  .link-btn{background:none;border:0;padding:0;font:inherit;color:var(--acc);text-decoration:underline;cursor:pointer}
+  .link-btn:disabled{color:var(--mute);text-decoration:none;cursor:not-allowed}
+  .row{display:flex;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="form-card">
+  <h1>Verify your email</h1>
+  <p class="sub">We sent a 6-digit code to <strong id="email-text"></strong>. It expires in 10 minutes.</p>
+
+  <div id="message" class="msg" role="alert"></div>
+
+  <form id="verify-form" novalidate>
+    <div class="field">
+      <label for="otp">Verification code</label>
+      <input id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="------">
+      <div class="error" id="otp-error"></div>
+    </div>
+    <button class="btn" id="submit" type="submit">Verify email</button>
+  </form>
+
+  <div class="row">
+    <button class="link-btn" id="resend" type="button" disabled>Resend code</button>
+    <a href="register.html">Wrong email? Change it</a>
+  </div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+const email = new URLSearchParams(window.location.search).get("email");
+const message = document.getElementById("message");
+const form = document.getElementById("verify-form");
+const resendBtn = document.getElementById("resend");
+const otpInput = document.getElementById("otp");
+
+// Opened without an email (for example typed in directly): send them back.
+if (!email) {
+  showMessage(message, "No email found. Please register first.", "error");
+  form.style.display = "none";
+  resendBtn.style.display = "none";
+} else {
+  document.getElementById("email-text").textContent = email;
+}
+
+// Only allow digits in the code box.
+otpInput.addEventListener("input", () => {
+  otpInput.value = otpInput.value.replace(/\D/g, "");
+});
+
+// 60-second wait before the code can be sent again.
+let timer = null;
+function startCooldown(seconds) {
+  let left = seconds;
+  resendBtn.disabled = true;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    left--;
+    if (left <= 0) {
+      clearInterval(timer);
+      resendBtn.disabled = false;
+      resendBtn.textContent = "Resend code";
+    } else {
+      resendBtn.textContent = "Resend code in " + left + "s";
+    }
+  }, 1000);
+  resendBtn.textContent = "Resend code in " + left + "s";
+}
+if (email) startCooldown(60); // a code was just sent during registration
+
+resendBtn.addEventListener("click", async () => {
+  message.className = "msg";
+  resendBtn.disabled = true;
+  try {
+    await api("/auth/send-otp", "POST", { email });
+    showMessage(message, "A new code has been sent.", "ok");
+    startCooldown(60);
+  } catch (err) {
+    showMessage(message, err.message, "error");
+    resendBtn.disabled = false;
+  }
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  message.className = "msg";
+  const otp = otpInput.value.trim();
+
+  if (!/^\d{6}$/.test(otp)) {
+    setFieldError("otp", "Enter the 6-digit code.");
+    return;
+  }
+  setFieldError("otp", "");
+
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  btn.textContent = "Verifying...";
+  try {
+    await api("/auth/verify-otp", "POST", { email, otp });
+    showMessage(message, "Email verified. Taking you to log in...", "ok");
+    setTimeout(() => (window.location.href = "login.html?verified=1"), 1200);
+  } catch (err) {
+    // Wrong code, expired code, or too many attempts: the server explains which.
+    showMessage(message, err.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Verify email";
+  }
+});
+</script>
+</body>
+</html>
