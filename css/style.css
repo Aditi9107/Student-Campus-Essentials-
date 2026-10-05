@@ -24,3 +24,24 @@ a{color:var(--acc)}
 .msg.ok{background:#e4f3ea;color:var(--ok)}
 .foot{text-align:center;margin-top:14px;color:var(--mute)}
 @media (prefers-color-scheme:dark){:root{--bg:#13191b;--ink:#e4ebe8;--mute:#9bb0b2;--line:#2b3a3d;--card:#1a2427;--acc:#6bb5d2;--acc-ink:#0f1a1d;--soft:#1f3033;--err:#f2a29c;--ok:#7fd1a0}.msg.error{background:#3a1f1d}.msg.ok{background:#1b3326}}
+
+/* ---- Shared: listing cards, tags, filter bar (used by Home, Listings, Needs) ---- */
+.btn.alt{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+.btn.inline{width:auto;text-decoration:none;display:inline-block}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;display:block}
+.item:hover{border-color:var(--acc)}
+.item .pic{height:130px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:.9rem}
+.item .pic img{width:100%;height:100%;object-fit:cover}
+.item .body{padding:12px}
+.item h3{margin:0 0 4px;font-size:1rem}
+.tag{display:inline-block;font-size:.8rem;background:var(--soft);padding:1px 8px;border-radius:10px;margin-right:6px}
+.price{font-weight:700;margin-top:6px}
+.empty{color:var(--mute);padding:18px;border:1px dashed var(--line);border-radius:8px;grid-column:1/-1}
+.page-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.page-head h1{margin:0;font-size:1.6rem}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.filters input,.filters select{padding:10px 12px;font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px}
+.filters input{flex:1 1 220px}
+.filters input:focus,.filters select:focus{outline:2px solid var(--acc);outline-offset:1px}
+.count{color:var(--mute);margin:0 0 12px;font-size:.95rem}
