@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .hero{padding:40px 0 28px}
+  .hero h1{font-size:clamp(1.9rem,5vw,2.8rem);line-height:1.15;margin:0 0 12px;max-width:18ch}
+  .hero p{color:var(--mute);max-width:56ch;margin:0 0 20px;font-size:1.05rem}
+  .actions{display:flex;gap:10px;flex-wrap:wrap}
+  .actions .btn{width:auto}
+  .btn.alt{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+  .section-head{display:flex;justify-content:space-between;align-items:baseline;margin:36px 0 12px}
+  .section-head h2{margin:0;font-size:1.3rem}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;display:block}
+  .item .pic{height:130px;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:.9rem}
+  .item .pic img{width:100%;height:100%;object-fit:cover}
+  .item .body{padding:12px}
+  .item h3{margin:0 0 4px;font-size:1rem}
+  .tag{display:inline-block;font-size:.8rem;background:var(--soft);padding:1px 8px;border-radius:10px;margin-right:6px}
+  .price{font-weight:700;margin-top:6px}
+  .empty{color:var(--mute);padding:18px;border:1px dashed var(--line);border-radius:8px}
+  .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px}
+  .steps div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+  .steps h3{margin:0 0 4px;font-size:1rem}
+  .steps p{margin:0;color:var(--mute);font-size:.95rem}
+</style>
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="container">
+  <section class="hero">
+    <h1>Buy, sell and rent student essentials on campus</h1>
+    <p>Textbooks, calculators, lab coats and more, from students in your college. Verified accounts only.</p>
+    <div class="actions" id="hero-actions"></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Latest listings</h2><a href="listings.html">See all listings</a></div>
+    <div class="cards" id="listings"><div class="empty">Loading listings...</div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Students are looking for</h2><a href="needs.html">See all needs</a></div>
+    <div class="cards" id="needs"><div class="empty">Loading needs...</div></div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>How it works</h2></div>
+    <div class="steps">
+      <div><h3>Register and verify</h3><p>Sign up with your email and confirm the code we send.</p></div>
+      <div><h3>List or request</h3><p>Post an item for sale or rent, or post what you need.</p></div>
+      <div><h3>Both sides accept</h3><p>When the owner and the requester agree, the deal details unlock.</p></div>
+      <div><h3>Meet and complete</h3><p>Collect the item at the pickup spot and mark the deal done.</p></div>
+    </div>
+  </section>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+// Buttons depend on whether the user is logged in.
+const loggedIn = !!localStorage.getItem("token");
+document.getElementById("hero-actions").innerHTML = loggedIn
+  ? '<a class="btn" href="listings.html">Browse listings</a><a class="btn alt" href="needs.html">See needs</a>'
+  : '<a class="btn" href="register.html">Create an account</a><a class="btn alt" href="login.html">Log in</a>';
+
+// Escape text from the server before putting it in the page (blocks injected HTML).
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+function priceText(l) {
+  if (l.type === "rent") return "Rs. " + esc(l.rentRate) + " / day";
+  return "Rs. " + esc(l.price);
+}
+
+function listingCard(l) {
+  const pic = l.imageUrl ? '<img src="' + esc(l.imageUrl) + '" alt="">' : "No photo";
+  return '<a class="item" href="listing.html?id=' + encodeURIComponent(l.id) + '">' +
+    '<div class="pic">' + pic + '</div><div class="body"><h3>' + esc(l.title) + '</h3>' +
+    '<span class="tag">' + (l.type === "rent" ? "Rent" : "Sale") + '</span>' +
+    '<span class="tag">' + esc(l.condition) + '</span>' +
+    '<div class="price">' + priceText(l) + '</div></div></a>';
+}
+
+function needCard(n) {
+  return '<a class="item" href="need.html?id=' + encodeURIComponent(n.id) + '"><div class="body">' +
+    '<h3>' + esc(n.itemName) + '</h3>' +
+    '<span class="tag">' + (n.mode === "rent" ? "Wants to rent" : "Wants to buy") + '</span>' +
+    '<div class="price">Budget: Rs. ' + esc(n.budget) + '</div></div></a>';
+}
+
+// Fills one section from the backend, with a friendly message if it fails or is empty.
+async function load(path, boxId, render, emptyText) {
+  const box = document.getElementById(boxId);
+  try {
+    const list = await api(path);
+    box.innerHTML = list.length ? list.map(render).join("") : '<div class="empty">' + emptyText + "</div>";
+  } catch (err) {
+    box.innerHTML = '<div class="empty">Could not load this right now. ' + esc(err.message) + "</div>";
+  }
+}
+
+load("/listings?limit=6", "listings", listingCard, "No listings yet. Be the first to post one.");
+load("/needs?limit=6", "needs", needCard, "No needs posted yet.");
+</script>
+</body>
+</html>
