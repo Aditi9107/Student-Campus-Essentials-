@@ -20,7 +20,12 @@ async function api(path, method = "GET", body = null) {
     throw new Error("Cannot reach the server. Check that the backend is running.");
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || "Something went wrong.");
+  if (!res.ok) {
+    const err = new Error(data.message || "Something went wrong.");
+    err.status = res.status;
+    err.code = data.code; // e.g. "UNVERIFIED"
+    throw err;
+  }
   return data;
 }
 
