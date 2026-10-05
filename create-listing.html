@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post a listing | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .form-card.wide{max-width:560px}
+  textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;min-height:90px;resize:vertical}
+  textarea:focus{outline:2px solid var(--acc);outline-offset:1px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:480px){.two{grid-template-columns:1fr}}
+  #preview{max-width:100%;max-height:180px;margin-top:8px;border-radius:6px;display:none}
+  .choice{display:flex;gap:18px}
+  .choice label{font-weight:400;display:flex;gap:6px;align-items:center;margin:0}
+  .choice input{width:auto}
+</style>
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="form-card wide">
+  <h1>Post a listing</h1>
+  <p class="sub">Sell an item or offer it for rent.</p>
+
+  <div id="message" class="msg" role="alert"></div>
+
+  <form id="listing-form" novalidate>
+    <div class="field">
+      <label for="title">Title</label>
+      <input id="title" type="text" maxlength="80" required>
+      <div class="error" id="title-error"></div>
+    </div>
+
+    <div class="field">
+      <label>Listing type</label>
+      <div class="choice">
+        <label><input type="radio" name="type" value="sell" checked> For sale</label>
+        <label><input type="radio" name="type" value="rent"> For rent</label>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category" required>
+          <option value="">Choose one</option>
+          <option value="stationery">Stationery &amp; art</option>
+          <option value="textbooks">Textbooks &amp; notes</option>
+          <option value="electronics">Electronics</option>
+          <option value="tools">Engineering tools</option>
+          <option value="lab">Lab gear</option>
+        </select>
+        <div class="error" id="category-error"></div>
+      </div>
+      <div class="field">
+        <label for="condition">Condition</label>
+        <select id="condition" required>
+          <option value="">Choose one</option>
+          <option>New</option>
+          <option>Like new</option>
+          <option>Good</option>
+          <option>Fair</option>
+        </select>
+        <div class="error" id="condition-error"></div>
+      </div>
+    </div>
+
+    <div class="field" id="price-field">
+      <label for="price">Price (Rs.)</label>
+      <input id="price" type="number" min="1" step="1" inputmode="numeric">
+      <div class="error" id="price-error"></div>
+    </div>
+    <div class="field" id="rent-field" style="display:none">
+      <label for="rentRate">Rent per day (Rs.)</label>
+      <input id="rentRate" type="number" min="1" step="1" inputmode="numeric">
+      <div class="error" id="rentRate-error"></div>
+    </div>
+
+    <div class="field">
+      <label for="pickup">Pickup spot</label>
+      <select id="pickup" required>
+        <option value="">Choose one</option>
+        <option>Library</option>
+        <option>Canteen</option>
+        <option>Hostel gate</option>
+        <option>Department block</option>
+        <option>Other (say in description)</option>
+      </select>
+      <div class="error" id="pickup-error"></div>
+    </div>
+
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea id="description" maxlength="500" placeholder="Edition, size, what is included, any wear..."></textarea>
+      <div class="error" id="description-error"></div>
+    </div>
+
+    <div class="field">
+      <label for="image">Photo</label>
+      <input id="image" type="file" accept="image/jpeg,image/png,image/webp">
+      <div class="hint">JPG, PNG or WebP, up to 2 MB.</div>
+      <img id="preview" alt="Preview of the chosen photo">
+      <div class="error" id="image-error"></div>
+    </div>
+
+    <button class="btn" id="submit" type="submit">Post listing</button>
+  </form>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+// Only logged-in users can post.
+if (!localStorage.getItem("token")) {
+  window.location.href = "login.html";
+}
+
+const message = document.getElementById("message");
+const form = document.getElementById("listing-form");
+const imageInput = document.getElementById("image");
+const preview = document.getElementById("preview");
+const MAX_BYTES = 2 * 1024 * 1024;
+
+function currentType() {
+  return form.elements["type"].value;
+}
+
+// Show the price box for sales, the rent box for rentals.
+function syncType() {
+  const rent = currentType() === "rent";
+  document.getElementById("price-field").style.display = rent ? "none" : "block";
+  document.getElementById("rent-field").style.display = rent ? "block" : "none";
+}
+form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", syncType));
+
+// Check the photo as soon as it is chosen, and show a preview.
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+  setFieldError("image", "");
+  preview.style.display = "none";
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    setFieldError("image", "Choose a JPG, PNG or WebP image.");
+    imageInput.value = "";
+    return;
+  }
+  if (file.size > MAX_BYTES) {
+    setFieldError("image", "That photo is over 2 MB. Choose a smaller one.");
+    imageInput.value = "";
+    return;
+  }
+  preview.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+});
+
+function validate(v) {
+  const e = {};
+  if (v.title.length < 3) e.title = "Enter a title of at least 3 characters.";
+  if (!v.category) e.category = "Choose a category.";
+  if (!v.condition) e.condition = "Choose the condition.";
+  if (!v.pickup) e.pickup = "Choose a pickup spot.";
+  if (v.type === "sell" && !(Number(v.price) >= 1)) e.price = "Enter a price of at least Rs. 1.";
+  if (v.type === "rent" && !(Number(v.rentRate) >= 1)) e.rentRate = "Enter a daily rent of at least Rs. 1.";
+  return e;
+}
+
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  message.className = "msg";
+
+  const v = {
+    title: document.getElementById("title").value.trim(),
+    type: currentType(),
+    category: document.getElementById("category").value,
+    condition: document.getElementById("condition").value,
+    price: document.getElementById("price").value,
+    rentRate: document.getElementById("rentRate").value,
+    pickup: document.getElementById("pickup").value,
+    description: document.getElementById("description").value.trim(),
+  };
+
+  const errors = validate(v);
+  ["title", "category", "condition", "price", "rentRate", "pickup"].forEach((f) =>
+    setFieldError(f, errors[f] || "")
+  );
+  if (Object.keys(errors).length) return;
+
+  // Photo travels with the text, so we send a form instead of JSON.
+  const data = new FormData();
+  data.append("title", v.title);
+  data.append("type", v.type);
+  data.append("category", v.category);
+  data.append("condition", v.condition);
+  data.append("pickupSpot", v.pickup);
+  data.append("description", v.description);
+  if (v.type === "sell") data.append("price", v.price);
+  else data.append("rentRate", v.rentRate);
+  if (imageInput.files[0]) data.append("image", imageInput.files[0]);
+
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  btn.textContent = "Posting...";
+  try {
+    const res = await fetch(API_BASE + "/listings", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + localStorage.getItem("token") },
+      body: data,
+    });
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+      return;
+    }
+    if (!res.ok) {
+      const err = new Error(body.message || "Could not post the listing.");
+      err.code = body.code;
+      throw err;
+    }
+    // Expected reply: { id: ... }
+    window.location.href = "listing.html?id=" + encodeURIComponent(body.id);
+  } catch (err) {
+    if (err.code === "UNVERIFIED") {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      showMessage(message, "Verify your email before posting.", "error");
+      message.innerHTML += ' <a href="verify.html?email=' + encodeURIComponent(user.email || "") + '">Verify now</a>';
+    } else {
+      showMessage(message, err.message === "Failed to fetch"
+        ? "Cannot reach the server. Check that the backend is running." : err.message, "error");
+    }
+    btn.disabled = false;
+    btn.textContent = "Post listing";
+  }
+});
+</script>
+</body>
+</html>
