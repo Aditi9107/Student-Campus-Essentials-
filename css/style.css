@@ -45,3 +45,29 @@ a{color:var(--acc)}
 .filters input{flex:1 1 220px}
 .filters input:focus,.filters select:focus{outline:2px solid var(--acc);outline-offset:1px}
 .count{color:var(--mute);margin:0 0 12px;font-size:.95rem}
+
+/* ---- Needs, requests, deal, dashboard ---- */
+.field textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;min-height:80px;resize:vertical}
+.field textarea:focus{outline:2px solid var(--acc);outline-offset:1px}
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{padding:8px 16px;font:inherit;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:20px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+.rows{display:grid;gap:12px}
+.row-card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.row-card h3{margin:0 0 4px;font-size:1.05rem}
+.row-card p{margin:4px 0;color:var(--mute)}
+.badge{display:inline-block;font-size:.8rem;font-weight:600;padding:2px 10px;border-radius:10px;background:var(--soft)}
+.badge.pending{background:#fdf0d5;color:#7a5200}.badge.accepted{background:#dcecf4;color:#14506b}
+.badge.confirmed,.badge.completed{background:#e4f3ea;color:var(--ok)}.badge.rejected,.badge.cancelled{background:#fbeae9;color:var(--err)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn.small{width:auto;padding:7px 14px;font-size:.95rem;text-decoration:none;display:inline-block}
+.btn.danger{background:transparent;color:var(--err);border:1px solid var(--err)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+.panel h2{margin:0 0 10px;font-size:1.15rem}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
+.facts dt{color:var(--mute)}.facts dd{margin:0}
+.notice{padding:12px;border-radius:6px;background:var(--soft)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+.choice{display:flex;gap:18px}.choice label{font-weight:400;display:flex;gap:6px;align-items:center;margin:0}.choice input{width:auto}
+@media (prefers-color-scheme:dark){.badge.pending{background:#3d3012;color:#f0cf85}.badge.accepted{background:#16303b;color:#8ac8e3}.badge.confirmed,.badge.completed{background:#1b3326}.badge.rejected,.badge.cancelled{background:#3a1f1d}}
