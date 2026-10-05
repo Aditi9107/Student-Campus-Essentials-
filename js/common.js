@@ -45,7 +45,29 @@ function renderNav() {
     '<a class="brand" href="index.html">Campus Thrift &amp; Rent Hub</a><div class="links">' +
     '<a href="listings.html">Listings</a><a href="needs.html">Needs</a>' +
     (loggedIn
-      ? '<a href="dashboard.html">My account</a>'
+      ? '<a href="my-requests.html">My requests</a><a href="dashboard.html">My account</a>'
       : '<a href="login.html">Log in</a><a href="register.html">Register</a>') +
     "</div>";
+}
+
+// ---- Added for the needs, requests, deal and dashboard pages ----
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+function logout() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.location.href = "index.html";
+}
+// Send the visitor to Login if they are not logged in. Returns true if logged in.
+function requireLogin() {
+  if (!localStorage.getItem("token")) { window.location.href = "login.html"; return false; }
+  return true;
+}
+// Call from a catch block: handles an expired login. Returns true if it redirected.
+function handleExpired(err) {
+  if (err.status === 401) { localStorage.removeItem("token"); window.location.href = "login.html"; return true; }
+  return false;
 }
