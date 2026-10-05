@@ -1,0 +1,26 @@
+:root{--bg:#f6f7f3;--ink:#1c2a2e;--mute:#566a6f;--line:#d3dad6;--card:#fff;--acc:#2a6f8c;--acc-ink:#fff;--soft:#e1ece8;--err:#b3261e;--ok:#2e7d4f}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Segoe UI",system-ui,Arial,sans-serif}
+a{color:var(--acc)}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+.nav .brand{font-weight:700;font-size:1.1rem;color:var(--ink);text-decoration:none}
+.nav .links{display:flex;gap:16px;align-items:center}
+.nav .links a{text-decoration:none;color:var(--ink)}
+.container{max-width:960px;margin:0 auto;padding:24px 16px}
+.form-card{max-width:440px;margin:32px auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:24px}
+.form-card h1{margin:0 0 4px;font-size:1.5rem}
+.form-card .sub{color:var(--mute);margin:0 0 18px}
+.field{margin-bottom:14px}
+.field label{display:block;font-weight:600;margin-bottom:4px}
+.field input,.field select{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px}
+.field input:focus,.field select:focus,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.field .hint{font-size:.85rem;color:var(--mute);margin-top:3px}
+.field .error{font-size:.85rem;color:var(--err);margin-top:3px;min-height:1em}
+.btn{display:inline-block;width:100%;padding:11px 16px;font:inherit;font-weight:600;color:var(--acc-ink);background:var(--acc);border:0;border-radius:6px;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.msg{padding:10px 12px;border-radius:6px;margin-bottom:14px;display:none}
+.msg.show{display:block}
+.msg.error{background:#fbeae9;color:var(--err)}
+.msg.ok{background:#e4f3ea;color:var(--ok)}
+.foot{text-align:center;margin-top:14px;color:var(--mute)}
+@media (prefers-color-scheme:dark){:root{--bg:#13191b;--ink:#e4ebe8;--mute:#9bb0b2;--line:#2b3a3d;--card:#1a2427;--acc:#6bb5d2;--acc-ink:#0f1a1d;--soft:#1f3033;--err:#f2a29c;--ok:#7fd1a0}.msg.error{background:#3a1f1d}.msg.ok{background:#1b3326}}

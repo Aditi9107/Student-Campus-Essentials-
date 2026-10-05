@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Register | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="form-card">
+  <h1>Create your account</h1>
+  <p class="sub">We will email you a code to verify your address.</p>
+
+  <div id="message" class="msg" role="alert"></div>
+
+  <form id="register-form" novalidate>
+    <div class="field">
+      <label for="name">Full name</label>
+      <input id="name" type="text" autocomplete="name" required>
+      <div class="error" id="name-error"></div>
+    </div>
+    <div class="field">
+      <label for="email">College email</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <div class="error" id="email-error"></div>
+    </div>
+    <div class="field">
+      <label for="phone">Phone number</label>
+      <input id="phone" type="tel" autocomplete="tel" inputmode="numeric" required>
+      <div class="hint">10 digits, shared only after a deal is confirmed.</div>
+      <div class="error" id="phone-error"></div>
+    </div>
+    <div class="field">
+      <label for="hostel">Hostel or department</label>
+      <input id="hostel" type="text" required>
+      <div class="error" id="hostel-error"></div>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="new-password" required>
+      <div class="hint">At least 8 characters, with a letter and a number.</div>
+      <div class="error" id="password-error"></div>
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm password</label>
+      <input id="confirm" type="password" autocomplete="new-password" required>
+      <div class="error" id="confirm-error"></div>
+    </div>
+    <button class="btn" id="submit" type="submit">Create account</button>
+  </form>
+
+  <p class="foot">Already registered? <a href="login.html">Log in</a></p>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+// If you choose "college domain only", put your domain here, e.g. "yourcollege.edu".
+// Leave it empty to allow any email.
+const ALLOWED_DOMAIN = "";
+
+const form = document.getElementById("register-form");
+const message = document.getElementById("message");
+const fields = ["name", "email", "phone", "hostel", "password", "confirm"];
+
+function validate(v) {
+  const errors = {};
+  if (v.name.length < 2) errors.name = "Enter your full name.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) {
+    errors.email = "Enter a valid email address.";
+  } else if (ALLOWED_DOMAIN && !v.email.toLowerCase().endsWith("@" + ALLOWED_DOMAIN)) {
+    errors.email = "Use your college email ending in @" + ALLOWED_DOMAIN + ".";
+  }
+  if (!/^\d{10}$/.test(v.phone)) errors.phone = "Enter a 10-digit phone number.";
+  if (v.hostel.length < 2) errors.hostel = "Enter your hostel or department.";
+  if (v.password.length < 8 || !/[A-Za-z]/.test(v.password) || !/\d/.test(v.password)) {
+    errors.password = "Use at least 8 characters with a letter and a number.";
+  }
+  if (v.confirm !== v.password) errors.confirm = "Passwords do not match.";
+  return errors;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  message.className = "msg";
+
+  const values = {};
+  fields.forEach((f) => (values[f] = document.getElementById(f).value.trim()));
+  // Passwords should not be trimmed.
+  values.password = document.getElementById("password").value;
+  values.confirm = document.getElementById("confirm").value;
+
+  const errors = validate(values);
+  fields.forEach((f) => setFieldError(f, errors[f] || ""));
+  if (Object.keys(errors).length) return;
+
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  btn.textContent = "Creating account...";
+  try {
+    await api("/auth/register", "POST", {
+      name: values.name,
+      email: values.email,
+      phone: values.phone,
+      hostel: values.hostel,
+      password: values.password,
+    });
+    // Backend creates the account as unverified and emails the OTP.
+    window.location.href = "verify.html?email=" + encodeURIComponent(values.email);
+  } catch (err) {
+    showMessage(message, err.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Create account";
+  }
+});
+</script>
+</body>
+</html>
