@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listing | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  @media (max-width:720px){.detail{grid-template-columns:1fr}}
+  .photo{background:var(--soft);border-radius:10px;min-height:260px;display:flex;align-items:center;justify-content:center;color:var(--mute);overflow:hidden}
+  .photo img{width:100%;display:block}
+  .info h1{margin:0 0 8px;font-size:1.6rem}
+  .big-price{font-size:1.5rem;font-weight:700;margin:8px 0 12px}
+  .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .facts dt{color:var(--mute)}
+  .facts dd{margin:0}
+  .desc{white-space:pre-wrap}
+  .req{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .req h2{margin:0 0 10px;font-size:1.1rem}
+  textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;min-height:70px;resize:vertical}
+  textarea:focus{outline:2px solid var(--acc);outline-offset:1px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .total{font-weight:600;margin:0 0 12px}
+  .notice{padding:12px;border-radius:6px;background:var(--soft);color:var(--ink)}
+</style>
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="container">
+  <p><a href="listings.html">Back to listings</a></p>
+  <div id="page"><div class="empty">Loading listing...</div></div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+const CATEGORY_NAMES = {
+  stationery: "Stationery & art", textbooks: "Textbooks & notes", electronics: "Electronics",
+  tools: "Engineering tools", lab: "Lab gear",
+};
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+const id = new URLSearchParams(window.location.search).get("id");
+const page = document.getElementById("page");
+let listing = null;
+
+function render(l) {
+  const isRent = l.type === "rent";
+  const priceLine = isRent ? "Rs. " + esc(l.rentRate) + " per day" : "Rs. " + esc(l.price);
+  const pic = l.imageUrl ? '<img src="' + esc(l.imageUrl) + '" alt="' + esc(l.title) + '">' : "No photo";
+  const seller = l.seller || {};
+
+  page.innerHTML =
+    '<div class="detail">' +
+      '<div class="photo">' + pic + "</div>" +
+      '<div class="info">' +
+        "<h1>" + esc(l.title) + "</h1>" +
+        '<span class="tag">' + (isRent ? "For rent" : "For sale") + "</span>" +
+        '<span class="tag">' + esc(l.condition) + "</span>" +
+        '<div class="big-price">' + priceLine + "</div>" +
+        '<dl class="facts">' +
+          "<dt>Category</dt><dd>" + esc(CATEGORY_NAMES[l.category] || l.category) + "</dd>" +
+          "<dt>Pickup spot</dt><dd>" + esc(l.pickupSpot) + "</dd>" +
+          "<dt>Seller</dt><dd>" + esc(seller.name) + (seller.hostel ? ", " + esc(seller.hostel) : "") + "</dd>" +
+        "</dl>" +
+        (l.description ? '<p class="desc">' + esc(l.description) + "</p>" : "") +
+        '<div id="request-area"></div>' +
+      "</div>" +
+    "</div>";
+
+  renderRequestArea(l);
+}
+
+function renderRequestArea(l) {
+  const area = document.getElementById("request-area");
+  const isRent = l.type === "rent";
+
+  if (l.isOwner) {
+    area.innerHTML = '<div class="notice">This is your listing. Requests appear under My requests.</div>';
+    return;
+  }
+  if (l.status && l.status !== "available") {
+    area.innerHTML = '<div class="notice">This item is no longer available.</div>';
+    return;
+  }
+  if (!localStorage.getItem("token")) {
+    area.innerHTML = '<a class="btn inline" href="login.html">Log in to send a request</a>';
+    return;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  area.innerHTML =
+    '<div class="req"><h2>' + (isRent ? "Request to rent" : "Request to buy") + "</h2>" +
+    '<div id="req-message" class="msg" role="alert"></div>' +
+    '<form id="req-form" novalidate>' +
+    (isRent
+      ? '<div class="two"><div class="field"><label for="start">From</label><input id="start" type="date" min="' + today + '"><div class="error" id="start-error"></div></div>' +
+        '<div class="field"><label for="end">To</label><input id="end" type="date" min="' + today + '"><div class="error" id="end-error"></div></div></div>' +
+        '<p class="total" id="total"></p>'
+      : '<div class="field"><label for="offer">Your offer (Rs.)</label><input id="offer" type="number" min="1" step="1" inputmode="numeric" value="' + esc(l.price) + '"><div class="error" id="offer-error"></div></div>') +
+    '<div class="field"><label for="note">Message to the seller (optional)</label><textarea id="note" maxlength="300"></textarea></div>' +
+    '<button class="btn" id="req-submit" type="submit">Send request</button></form></div>';
+
+  const form = document.getElementById("req-form");
+  if (isRent) {
+    const update = () => {
+      const s = document.getElementById("start").value, e = document.getElementById("end").value;
+      const total = document.getElementById("total");
+      if (s && e && e >= s) {
+        const days = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
+        total.textContent = days + (days === 1 ? " day" : " days") + ", total Rs. " + days * Number(l.rentRate);
+      } else total.textContent = "";
+    };
+    document.getElementById("start").addEventListener("change", update);
+    document.getElementById("end").addEventListener("change", update);
+  }
+  form.addEventListener("submit", (ev) => { ev.preventDefault(); sendRequest(l); });
+}
+
+async function sendRequest(l) {
+  const isRent = l.type === "rent";
+  const msg = document.getElementById("req-message");
+  msg.className = "msg";
+  const body = { listingId: l.id, message: document.getElementById("note").value.trim() };
+
+  if (isRent) {
+    const s = document.getElementById("start").value, e = document.getElementById("end").value;
+    setFieldError("start", s ? "" : "Choose a start date.");
+    setFieldError("end", !e ? "Choose an end date." : e < s ? "End date must be on or after the start date." : "");
+    if (!s || !e || e < s) return;
+    body.startDate = s;
+    body.endDate = e;
+  } else {
+    const offer = Number(document.getElementById("offer").value);
+    setFieldError("offer", offer >= 1 ? "" : "Enter an offer of at least Rs. 1.");
+    if (!(offer >= 1)) return;
+    body.offeredPrice = offer;
+  }
+
+  const btn = document.getElementById("req-submit");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  try {
+    await api("/requests", "POST", body);
+    document.getElementById("req-form").style.display = "none";
+    showMessage(msg, "Request sent. You will see the seller's answer under My requests.", "ok");
+    msg.innerHTML += ' <a href="my-requests.html">View my requests</a>';
+  } catch (err) {
+    if (err.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+      return;
+    }
+    if (err.code === "UNVERIFIED") {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      showMessage(msg, "Verify your email before sending requests.", "error");
+      msg.innerHTML += ' <a href="verify.html?email=' + encodeURIComponent(user.email || "") + '">Verify now</a>';
+    } else {
+      showMessage(msg, err.message, "error");
+    }
+    btn.disabled = false;
+    btn.textContent = "Send request";
+  }
+}
+
+async function load() {
+  if (!id) {
+    page.innerHTML = '<div class="empty">No listing selected. <a href="listings.html">Browse listings</a></div>';
+    return;
+  }
+  try {
+    listing = await api("/listings/" + encodeURIComponent(id));
+    document.title = listing.title + " | Campus Thrift & Rent Hub";
+    render(listing);
+  } catch (err) {
+    page.innerHTML = '<div class="empty">' + (err.status === 404 ? "This listing was not found." : "Could not load this listing. " + esc(err.message)) + "</div>";
+  }
+}
+load();
+</script>
+</body>
+</html>
