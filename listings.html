@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listings | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="container">
+  <div class="page-head">
+    <h1>Listings</h1>
+    <a class="btn inline" id="post-btn" href="create-listing.html">Post a listing</a>
+  </div>
+
+  <div class="filters">
+    <input id="search" type="search" placeholder="Search by title" aria-label="Search listings">
+    <select id="category" aria-label="Category">
+      <option value="">All categories</option>
+      <option value="stationery">Stationery &amp; art</option>
+      <option value="textbooks">Textbooks &amp; notes</option>
+      <option value="electronics">Electronics</option>
+      <option value="tools">Engineering tools</option>
+      <option value="lab">Lab gear</option>
+    </select>
+    <select id="type" aria-label="Sale or rent">
+      <option value="">Sale and rent</option>
+      <option value="sell">For sale</option>
+      <option value="rent">For rent</option>
+    </select>
+  </div>
+
+  <p class="count" id="count" aria-live="polite"></p>
+  <div class="cards" id="results"><div class="empty">Loading listings...</div></div>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+// Posting needs a login. Send visitors to Login first.
+if (!localStorage.getItem("token")) {
+  document.getElementById("post-btn").href = "login.html";
+}
+
+// Escape text from the server before putting it in the page.
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s == null ? "" : String(s);
+  return d.innerHTML;
+}
+
+function card(l) {
+  const isRent = l.type === "rent";
+  const pic = l.imageUrl ? '<img src="' + esc(l.imageUrl) + '" alt="">' : "No photo";
+  const price = isRent ? "Rs. " + esc(l.rentRate) + " / day" : "Rs. " + esc(l.price);
+  return '<a class="item" href="listing.html?id=' + encodeURIComponent(l.id) + '">' +
+    '<div class="pic">' + pic + '</div><div class="body"><h3>' + esc(l.title) + '</h3>' +
+    '<span class="tag">' + (isRent ? "Rent" : "Sale") + '</span>' +
+    '<span class="tag">' + esc(l.condition) + '</span>' +
+    '<div class="price">' + price + '</div></div></a>';
+}
+
+const results = document.getElementById("results");
+const count = document.getElementById("count");
+const searchBox = document.getElementById("search");
+const categoryBox = document.getElementById("category");
+const typeBox = document.getElementById("type");
+let latest = 0; // ignore slow replies that arrive after a newer search
+
+async function loadListings() {
+  const id = ++latest;
+  const params = new URLSearchParams();
+  if (searchBox.value.trim()) params.set("search", searchBox.value.trim());
+  if (categoryBox.value) params.set("category", categoryBox.value);
+  if (typeBox.value) params.set("type", typeBox.value);
+
+  results.innerHTML = '<div class="empty">Loading listings...</div>';
+  try {
+    const list = await api("/listings?" + params.toString());
+    if (id !== latest) return;
+    count.textContent = list.length + (list.length === 1 ? " listing found" : " listings found");
+    results.innerHTML = list.length
+      ? list.map(card).join("")
+      : '<div class="empty">No listings match. Try a different search, or clear the filters.</div>';
+  } catch (err) {
+    if (id !== latest) return;
+    count.textContent = "";
+    results.innerHTML = '<div class="empty">Could not load listings. ' + esc(err.message) + "</div>";
+  }
+}
+
+// Search waits until typing pauses; the dropdowns search at once.
+let timer = null;
+searchBox.addEventListener("input", () => {
+  clearTimeout(timer);
+  timer = setTimeout(loadListings, 400);
+});
+categoryBox.addEventListener("change", loadListings);
+typeBox.addEventListener("change", loadListings);
+
+loadListings();
+</script>
+</body>
+</html>
