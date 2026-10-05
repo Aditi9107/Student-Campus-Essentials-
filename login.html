@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+
+<main class="form-card">
+  <h1>Log in</h1>
+  <p class="sub">Welcome back. Use the email you registered with.</p>
+
+  <div id="message" class="msg" role="alert"></div>
+
+  <form id="login-form" novalidate>
+    <div class="field">
+      <label for="email">Email</label>
+      <input id="email" type="email" autocomplete="email" required>
+      <div class="error" id="email-error"></div>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <div class="error" id="password-error"></div>
+    </div>
+    <button class="btn" id="submit" type="submit">Log in</button>
+  </form>
+
+  <p class="foot">New here? <a href="register.html">Create an account</a></p>
+</main>
+
+<script src="js/common.js"></script>
+<script>
+renderNav();
+
+const message = document.getElementById("message");
+const form = document.getElementById("login-form");
+
+// Arriving from the Verify page after a successful verification.
+if (new URLSearchParams(window.location.search).get("verified") === "1") {
+  showMessage(message, "Email verified. You can log in now.", "ok");
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  message.className = "msg";
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  let valid = true;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setFieldError("email", "Enter a valid email address.");
+    valid = false;
+  } else setFieldError("email", "");
+  if (!password) {
+    setFieldError("password", "Enter your password.");
+    valid = false;
+  } else setFieldError("password", "");
+  if (!valid) return;
+
+  const btn = document.getElementById("submit");
+  btn.disabled = true;
+  btn.textContent = "Logging in...";
+  try {
+    // Expected reply: { token: "...", user: { name: "...", email: "..." } }
+    const data = await api("/auth/login", "POST", { email, password });
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    window.location.href = "index.html";
+  } catch (err) {
+    // Account exists but the email was never verified: send them to the Verify page.
+    if (err.code === "UNVERIFIED") {
+      window.location.href = "verify.html?email=" + encodeURIComponent(email);
+      return;
+    }
+    showMessage(message, err.message, "error");
+    btn.disabled = false;
+    btn.textContent = "Log in";
+  }
+});
+</script>
+</body>
+</html>
