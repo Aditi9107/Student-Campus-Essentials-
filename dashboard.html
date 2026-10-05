@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My account | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="container" style="max-width:760px">
+  <div class="page-head"><h1>My account</h1><button class="btn small danger" id="logout">Log out</button></div>
+  <div class="panel"><h2>Profile</h2><div id="profile">Loading...</div></div>
+  <div class="panel"><h2>My listings</h2><div class="rows" id="my-listings">Loading...</div>
+    <div class="btns"><a class="btn small" href="create-listing.html">Post a listing</a></div></div>
+  <div class="panel"><h2>My needs</h2><div class="rows" id="my-needs">Loading...</div>
+    <div class="btns"><a class="btn small" href="create-need.html">Post a need</a></div></div>
+  <div class="panel"><h2>Requests and deals</h2><p>Accept offers, confirm deals and see contact details once both sides agree.</p>
+    <a class="btn small" href="my-requests.html">Open My requests</a></div>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+requireLogin();
+document.getElementById("logout").addEventListener("click", logout);
+function fill(id, list, render, empty) {
+  document.getElementById(id).innerHTML = list.length ? list.map(render).join("") : '<div class="empty">' + empty + '</div>';
+}
+function row(page, x, title) {
+  return '<div class="row-card"><h3><a href="' + page + '?id=' + encodeURIComponent(x.id) + '">' + esc(title) + '</a></h3><span class="badge">' + esc(x.status) + '</span></div>';
+}
+async function section(path, boxId, fn) {
+  try { fn(await api(path)); }
+  catch (err) { if (handleExpired(err)) return; document.getElementById(boxId).textContent = "Could not load this. " + err.message; }
+}
+if (localStorage.getItem("token")) {
+  section("/me", "profile", p => {
+    document.getElementById("profile").innerHTML = '<dl class="facts"><dt>Name</dt><dd>' + esc(p.name) + '</dd><dt>Email</dt><dd>' + esc(p.email) +
+      '</dd><dt>Phone</dt><dd>' + esc(p.phone) + '</dd><dt>Hostel / dept</dt><dd>' + esc(p.hostel) + '</dd></dl>';
+  });
+  section("/me/listings", "my-listings", l => fill("my-listings", l, x => row("listing.html", x, x.title), "You have not posted any listings."));
+  section("/me/needs", "my-needs", l => fill("my-needs", l, x => row("need.html", x, x.itemName), "You have not posted any needs."));
+}
+</script>
+</body>
+</html>

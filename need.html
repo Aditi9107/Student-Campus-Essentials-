@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Need | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="container" style="max-width:640px">
+  <p><a href="needs.html">Back to needs</a></p>
+  <div id="page"><div class="empty">Loading...</div></div>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+const CAT = {stationery:"Stationery & art",textbooks:"Textbooks & notes",electronics:"Electronics",tools:"Engineering tools",lab:"Lab gear"};
+const id = new URLSearchParams(window.location.search).get("id"), page = document.getElementById("page");
+function render(n) {
+  const rent = n.mode === "rent", p = n.poster || {};
+  let action;
+  if (n.isOwner) action = '<div class="notice">This is your need. Offers appear under My requests.</div>';
+  else if (n.status && n.status !== "open") action = '<div class="notice">This need is closed.</div>';
+  else if (!localStorage.getItem("token")) action = '<a class="btn inline" href="login.html">Log in to offer an item</a>';
+  else action = '<div class="panel"><h2>I have this</h2><div id="msg" class="msg" role="alert"></div><form id="offer-form" novalidate>' +
+    '<div class="field"><label for="price">' + (rent ? "Your rent per day (Rs.)" : "Your price (Rs.)") + '</label><input id="price" type="number" min="1" step="1" inputmode="numeric" value="' + esc(n.budget) + '"><div class="error" id="price-error"></div></div>' +
+    '<div class="field"><label for="note">Message (optional)</label><textarea id="note" maxlength="300" placeholder="Describe your item and its condition"></textarea></div>' +
+    '<button class="btn" id="go" type="submit">Send offer</button></form></div>';
+  page.innerHTML = '<h1 style="margin:0 0 8px">' + esc(n.itemName) + '</h1>' +
+    '<span class="tag">' + (rent ? "Wants to rent" : "Wants to buy") + '</span><span class="tag">' + esc(CAT[n.category] || n.category) + '</span>' +
+    '<dl class="facts" style="margin:14px 0"><dt>' + (rent ? "Budget per day" : "Budget") + '</dt><dd>Rs. ' + esc(n.budget) + '</dd>' +
+    (rent ? '<dt>Needed for</dt><dd>' + esc(n.durationDays) + ' days</dd>' : '') +
+    '<dt>Posted by</dt><dd>' + esc(p.name) + (p.hostel ? ", " + esc(p.hostel) : "") + '</dd></dl>' +
+    (n.description ? '<p style="white-space:pre-wrap">' + esc(n.description) + '</p>' : '') + action;
+  const f = document.getElementById("offer-form");
+  if (f) f.addEventListener("submit", (e) => { e.preventDefault(); send(n); });
+}
+async function send(n) {
+  const msg = document.getElementById("msg"); msg.className = "msg";
+  const price = Number(document.getElementById("price").value);
+  setFieldError("price", price >= 1 ? "" : "Enter an amount of at least Rs. 1.");
+  if (!(price >= 1)) return;
+  const btn = document.getElementById("go"); btn.disabled = true; btn.textContent = "Sending...";
+  try {
+    await api("/needs/" + encodeURIComponent(n.id) + "/offers", "POST", { price, message: document.getElementById("note").value.trim() });
+    document.getElementById("offer-form").style.display = "none";
+    showMessage(msg, "Offer sent. You will see the answer under My requests.", "ok");
+    msg.innerHTML += ' <a href="my-requests.html">View my requests</a>';
+  } catch (err) {
+    if (handleExpired(err)) return;
+    if (err.code === "UNVERIFIED") {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      showMessage(msg, "Verify your email before sending offers.", "error");
+      msg.innerHTML += ' <a href="verify.html?email=' + encodeURIComponent(u.email || "") + '">Verify now</a>';
+    } else showMessage(msg, err.message, "error");
+    btn.disabled = false; btn.textContent = "Send offer";
+  }
+}
+(async () => {
+  if (!id) { page.innerHTML = '<div class="empty">No need selected. <a href="needs.html">Browse needs</a></div>'; return; }
+  try { render(await api("/needs/" + encodeURIComponent(id))); }
+  catch (err) { page.innerHTML = '<div class="empty">' + (err.status === 404 ? "This need was not found." : "Could not load this need. " + esc(err.message)) + '</div>'; }
+})();
+</script>
+</body>
+</html>

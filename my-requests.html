@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My requests | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="container" style="max-width:760px">
+  <h1 style="margin:0 0 14px">My requests</h1>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-incoming" aria-selected="true">Incoming</button>
+    <button class="tab" role="tab" id="tab-outgoing" aria-selected="false">Outgoing</button>
+  </div>
+  <div id="msg" class="msg" role="alert"></div>
+  <div class="rows" id="list"><div class="empty">Loading...</div></div>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+requireLogin();
+const STATUS = { pending: "Waiting for an answer", accepted: "Accepted, waiting for confirmation", confirmed: "Confirmed", completed: "Completed", rejected: "Rejected", cancelled: "Cancelled" };
+const LABEL = { accept: "Accept", reject: "Reject", confirm: "Confirm deal", complete: "Mark completed", cancel: "Cancel request" };
+let box = "incoming", latest = 0;
+const list = document.getElementById("list"), msg = document.getElementById("msg");
+function terms(r) {
+  if (r.startDate) return "Dates: " + esc(r.startDate) + " to " + esc(r.endDate) + (r.offeredPrice ? ", Rs. " + esc(r.offeredPrice) : "");
+  return "Price: Rs. " + esc(r.offeredPrice);
+}
+function card(r) {
+  const acts = (r.actions || []).map(a => '<button class="btn small' + (a === "reject" || a === "cancel" ? " danger" : "") + '" data-id="' + esc(r.id) + '" data-act="' + esc(a) + '">' + esc(LABEL[a] || a) + '</button>').join("");
+  const deal = (r.status === "confirmed" || r.status === "completed") ? '<a class="btn small" href="deal.html?id=' + encodeURIComponent(r.id) + '">View deal details</a>' : "";
+  return '<div class="row-card"><h3>' + esc(r.title) + '</h3>' +
+    '<span class="badge ' + esc(r.status) + '">' + esc(STATUS[r.status] || r.status) + '</span> <span class="tag">' + (r.kind === "need" ? "Offer on a need" : "Request on a listing") + '</span>' +
+    '<p>' + (box === "incoming" ? "From " : "To ") + esc(r.otherParty && r.otherParty.name) + '. ' + terms(r) + '</p>' +
+    (r.message ? '<p>"' + esc(r.message) + '"</p>' : '') + '<div class="btns">' + acts + deal + '</div></div>';
+}
+async function load() {
+  const id = ++latest;
+  list.innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    const rows = await api("/requests?box=" + box);
+    if (id !== latest) return;
+    list.innerHTML = rows.length ? rows.map(card).join("") : '<div class="empty">Nothing here yet.</div>';
+  } catch (err) {
+    if (handleExpired(err)) return;
+    if (id === latest) list.innerHTML = '<div class="empty">Could not load requests. ' + esc(err.message) + '</div>';
+  }
+}
+function pick(which) {
+  box = which;
+  document.getElementById("tab-incoming").setAttribute("aria-selected", which === "incoming");
+  document.getElementById("tab-outgoing").setAttribute("aria-selected", which === "outgoing");
+  msg.className = "msg"; load();
+}
+document.getElementById("tab-incoming").addEventListener("click", () => pick("incoming"));
+document.getElementById("tab-outgoing").addEventListener("click", () => pick("outgoing"));
+list.addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  b.disabled = true; msg.className = "msg";
+  try { await api("/requests/" + encodeURIComponent(b.dataset.id) + "/" + b.dataset.act, "POST"); await load(); }
+  catch (err) { if (handleExpired(err)) return; showMessage(msg, err.message, "error"); b.disabled = false; }
+});
+if (localStorage.getItem("token")) load();
+</script>
+</body>
+</html>

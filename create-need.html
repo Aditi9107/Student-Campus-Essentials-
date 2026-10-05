@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post a need | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="form-card">
+  <h1>Post a need</h1>
+  <p class="sub">Tell students what you are looking for.</p>
+  <div id="message" class="msg" role="alert"></div>
+  <form id="need-form" novalidate>
+    <div class="field"><label for="itemName">What do you need?</label><input id="itemName" type="text" maxlength="80"><div class="error" id="itemName-error"></div></div>
+    <div class="field"><label>I want to</label>
+      <div class="choice"><label><input type="radio" name="mode" value="buy" checked> Buy</label><label><input type="radio" name="mode" value="rent"> Rent</label></div></div>
+    <div class="field"><label for="category">Category</label>
+      <select id="category"><option value="">Choose one</option><option value="stationery">Stationery &amp; art</option><option value="textbooks">Textbooks &amp; notes</option><option value="electronics">Electronics</option><option value="tools">Engineering tools</option><option value="lab">Lab gear</option></select>
+      <div class="error" id="category-error"></div></div>
+    <div class="two">
+      <div class="field"><label for="budget" id="budget-label">Budget (Rs.)</label><input id="budget" type="number" min="1" step="1" inputmode="numeric"><div class="error" id="budget-error"></div></div>
+      <div class="field" id="days-field" style="display:none"><label for="days">For how many days</label><input id="days" type="number" min="1" step="1" inputmode="numeric"><div class="error" id="days-error"></div></div>
+    </div>
+    <div class="field"><label for="description">Details (optional)</label><textarea id="description" maxlength="500" placeholder="Edition, size, when you need it..."></textarea></div>
+    <button class="btn" id="submit" type="submit">Post need</button>
+  </form>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+requireLogin();
+const form = document.getElementById("need-form"), message = document.getElementById("message");
+const mode = () => form.elements["mode"].value;
+form.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener("change", () => {
+  const rent = mode() === "rent";
+  document.getElementById("days-field").style.display = rent ? "block" : "none";
+  document.getElementById("budget-label").textContent = rent ? "Budget per day (Rs.)" : "Budget (Rs.)";
+}));
+form.addEventListener("submit", async (e) => {
+  e.preventDefault(); message.className = "msg";
+  const v = { itemName: document.getElementById("itemName").value.trim(), mode: mode(), category: document.getElementById("category").value,
+    budget: Number(document.getElementById("budget").value), durationDays: Number(document.getElementById("days").value),
+    description: document.getElementById("description").value.trim() };
+  const er = {};
+  if (v.itemName.length < 3) er.itemName = "Enter at least 3 characters.";
+  if (!v.category) er.category = "Choose a category.";
+  if (!(v.budget >= 1)) er.budget = "Enter a budget of at least Rs. 1.";
+  if (v.mode === "rent" && !(v.durationDays >= 1)) er.days = "Enter the number of days.";
+  ["itemName", "category", "budget", "days"].forEach(f => setFieldError(f, er[f] || ""));
+  if (Object.keys(er).length) return;
+  if (v.mode === "buy") delete v.durationDays;
+  const btn = document.getElementById("submit"); btn.disabled = true; btn.textContent = "Posting...";
+  try {
+    const r = await api("/needs", "POST", v);
+    window.location.href = "need.html?id=" + encodeURIComponent(r.id);
+  } catch (err) {
+    if (handleExpired(err)) return;
+    if (err.code === "UNVERIFIED") {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      showMessage(message, "Verify your email before posting.", "error");
+      message.innerHTML += ' <a href="verify.html?email=' + encodeURIComponent(u.email || "") + '">Verify now</a>';
+    } else showMessage(message, err.message, "error");
+    btn.disabled = false; btn.textContent = "Post need";
+  }
+});
+</script>
+</body>
+</html>

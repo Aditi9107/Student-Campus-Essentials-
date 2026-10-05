@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deal details | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="container" style="max-width:640px">
+  <p><a href="my-requests.html">Back to my requests</a></p>
+  <div id="msg" class="msg" role="alert"></div>
+  <div id="page"><div class="empty">Loading...</div></div>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+requireLogin();
+const id = new URLSearchParams(window.location.search).get("id"), page = document.getElementById("page"), msg = document.getElementById("msg");
+function person(title, p) {
+  p = p || {};
+  return '<div class="panel"><h2>' + title + '</h2><dl class="facts"><dt>Name</dt><dd>' + esc(p.name) + '</dd><dt>Phone</dt><dd>' + esc(p.phone) +
+    '</dd><dt>Email</dt><dd>' + esc(p.email) + '</dd><dt>Hostel / dept</dt><dd>' + esc(p.hostel) + '</dd></dl></div>';
+}
+function render(d) {
+  const done = d.status === "completed";
+  const dates = d.startDate ? '<dt>Rental dates</dt><dd>' + esc(d.startDate) + ' to ' + esc(d.endDate) + '</dd>' : '';
+  page.innerHTML = '<h1 style="margin:0 0 8px">' + esc(d.title) + '</h1><span class="badge ' + esc(d.status) + '">' + (done ? "Completed" : "Confirmed") + '</span>' +
+    '<div class="panel" style="margin-top:14px"><h2>Agreed terms</h2><dl class="facts"><dt>Type</dt><dd>' + (d.type === "rent" ? "Rental" : "Purchase") + '</dd>' +
+    '<dt>Agreed price</dt><dd>Rs. ' + esc(d.agreedPrice) + '</dd>' + dates + '<dt>Pickup spot</dt><dd>' + esc(d.pickupSpot) + '</dd></dl></div>' +
+    person("Your details", d.you) + person("Other person", d.other) +
+    ((d.actions || []).includes("complete") ? '<button class="btn" id="done">Mark as completed</button>' :
+      done ? '<div class="notice">This deal is complete.</div>' : '<div class="notice">You have marked this complete. Waiting for the other person.</div>');
+  const b = document.getElementById("done");
+  if (b) b.addEventListener("click", async () => {
+    b.disabled = true; msg.className = "msg";
+    try { await api("/requests/" + encodeURIComponent(id) + "/complete", "POST"); load(); }
+    catch (err) { if (handleExpired(err)) return; showMessage(msg, err.message, "error"); b.disabled = false; }
+  });
+}
+async function load() {
+  if (!id) { page.innerHTML = '<div class="empty">No deal selected.</div>'; return; }
+  try { render(await api("/requests/" + encodeURIComponent(id) + "/deal")); }
+  catch (err) {
+    if (handleExpired(err)) return;
+    page.innerHTML = '<div class="empty">' + (err.status === 403 ? "Deal details unlock when both people have accepted. Check My requests for the current status." : "Could not load this deal. " + esc(err.message)) + '</div>';
+  }
+}
+if (localStorage.getItem("token")) load();
+</script>
+</body>
+</html>
