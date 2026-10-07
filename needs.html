@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Needs | Campus Thrift &amp; Rent Hub</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="nav" id="nav"></nav>
+<main class="container">
+  <div class="page-head"><h1>Needs</h1><a class="btn inline" id="post-btn" href="create-need.html">Post a need</a></div>
+  <div class="filters">
+    <input id="search" type="search" placeholder="Search by item name" aria-label="Search needs">
+    <select id="category" aria-label="Category">
+      <option value="">All categories</option><option value="stationery">Stationery &amp; art</option>
+      <option value="textbooks">Textbooks &amp; notes</option><option value="electronics">Electronics</option>
+      <option value="tools">Engineering tools</option><option value="lab">Lab gear</option>
+    </select>
+    <select id="mode" aria-label="Buy or rent"><option value="">Buy and rent</option><option value="buy">Wants to buy</option><option value="rent">Wants to rent</option></select>
+  </div>
+  <p class="count" id="count" aria-live="polite"></p>
+  <div class="cards" id="results"><div class="empty">Loading needs...</div></div>
+</main>
+<script src="js/common.js"></script>
+<script>
+renderNav();
+if (!localStorage.getItem("token")) document.getElementById("post-btn").href = "login.html";
+const CAT = {stationery:"Stationery & art",textbooks:"Textbooks & notes",electronics:"Electronics",tools:"Engineering tools",lab:"Lab gear"};
+const results = document.getElementById("results"), count = document.getElementById("count");
+const searchBox = document.getElementById("search"), categoryBox = document.getElementById("category"), modeBox = document.getElementById("mode");
+let latest = 0;
+function card(n) {
+  return '<a class="item" href="need.html?id=' + encodeURIComponent(n.id) + '"><div class="body"><h3>' + esc(n.itemName) + '</h3>' +
+    '<span class="tag">' + (n.mode === "rent" ? "Wants to rent" : "Wants to buy") + '</span><span class="tag">' + esc(CAT[n.category] || n.category) + '</span>' +
+    '<div class="price">Budget: Rs. ' + esc(n.budget) + '</div></div></a>';
+}
+async function load() {
+  const id = ++latest, p = new URLSearchParams();
+  if (searchBox.value.trim()) p.set("search", searchBox.value.trim());
+  if (categoryBox.value) p.set("category", categoryBox.value);
+  if (modeBox.value) p.set("mode", modeBox.value);
+  results.innerHTML = '<div class="empty">Loading needs...</div>';
+  try {
+    const list = await api("/needs?" + p);
+    if (id !== latest) return;
+    count.textContent = list.length + (list.length === 1 ? " need found" : " needs found");
+    results.innerHTML = list.length ? list.map(card).join("") : '<div class="empty">No needs match. Try a different search.</div>';
+  } catch (err) {
+    if (id !== latest) return;
+    count.textContent = "";
+    results.innerHTML = '<div class="empty">Could not load needs. ' + esc(err.message) + '</div>';
+  }
+}
+let t; searchBox.addEventListener("input", () => { clearTimeout(t); t = setTimeout(load, 400); });
+categoryBox.addEventListener("change", load); modeBox.addEventListener("change", load);
+load();
+</script>
+</body>
+</html>
