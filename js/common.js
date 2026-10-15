@@ -1,6 +1,5 @@
 // Shared helpers used by every page.
-// Change this if your Java backend runs on a different address.
-const API_BASE = "http://localhost:8080/api";
+const API_BASE = "https://campus-hub-backend-m7nf.onrender.com/api";
 
 // Calls the Java backend and returns the parsed JSON.
 // Throws an Error with the server's message if the request fails.
